@@ -22,6 +22,7 @@ import java.io.DataOutput;
 import java.io.IOException;
 import java.sql.Date;
 import java.util.Calendar;
+import java.util.GregorianCalendar;
 import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 
@@ -49,6 +50,18 @@ public class DateWritable implements WritableComparable<DateWritable> {
     @Override
     protected TimeZone initialValue() {
       return Calendar.getInstance().getTimeZone();
+    }
+  };
+  private static final ThreadLocal<Calendar> UTC_CALENDAR = new ThreadLocal() {
+	 @Override
+    protected Calendar initialValue() {
+      return new GregorianCalendar(TimeZone.getTimeZone("UTC"));
+    }
+  };
+  private static final ThreadLocal<Calendar> LOCAL_CALENDAR = new ThreadLocal() {
+	 @Override
+    protected Calendar initialValue() {
+      return Calendar.getInstance();
     }
   };
 
@@ -101,7 +114,11 @@ public class DateWritable implements WritableComparable<DateWritable> {
    * @return Date value corresponding to the date in the local time zone
    */
   public Date get() {
-    return new Date(daysToMillis(daysSinceEpoch));
+	  return get(true);
+  }
+  
+  public Date get(boolean doesTimeMatter) {
+    return new Date(daysToMillis(this.daysSinceEpoch, doesTimeMatter));
   }
 
   public int getDays() {
@@ -121,12 +138,29 @@ public class DateWritable implements WritableComparable<DateWritable> {
   }
 
   public static long daysToMillis(int d) {
-    // Convert from day offset to ms in UTC, then apply local timezone offset.
-    long millisUtc = d * MILLIS_PER_DAY;
-    long tmp =  millisUtc - LOCAL_TIMEZONE.get().getOffset(millisUtc);
-    // Between millisUtc and tmp, the time zone offset may have changed due to DST.
-    // Look up the offset again.
-    return millisUtc - LOCAL_TIMEZONE.get().getOffset(tmp);
+    return daysToMillis(d, true);
+  }
+  
+  public static long daysToMillis(int d, boolean doesTimeMatter) {
+	    // Convert from day offset to ms in UTC, then apply local timezone offset.
+    long utcMidnight = d * MILLIS_PER_DAY;
+    
+    long utcMidnightOffset = ((TimeZone)LOCAL_TIMEZONE.get()).getOffset(utcMidnight);
+    
+    long hopefullyMidnight = utcMidnight - utcMidnightOffset;
+    
+    long offsetAtHM = ((TimeZone)LOCAL_TIMEZONE.get()).getOffset(hopefullyMidnight);
+    if (utcMidnightOffset == offsetAtHM) {
+      return hopefullyMidnight;
+     }
+    if (!doesTimeMatter) {
+      return daysToMillis(d + 1) - (MILLIS_PER_DAY >> 1);
+     }
+    Calendar utc = (Calendar)UTC_CALENDAR.get();
+    Calendar local = (Calendar)LOCAL_CALENDAR.get();
+    utc.setTimeInMillis(utcMidnight);
+    local.set(utc.get(1), utc.get(2), utc.get(5));
+    return local.getTimeInMillis();
   }
 
   public static int millisToDays(long millisLocal) {
@@ -182,7 +216,7 @@ public class DateWritable implements WritableComparable<DateWritable> {
 
   @Override
   public String toString() {
-    return get().toString();
+    return get(false).toString();
   }
 
   @Override
