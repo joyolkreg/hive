@@ -101,8 +101,7 @@ public class HiveSchemaConverter {
         int bytes = ParquetHiveSerDe.PRECISION_TO_BYTE_COUNT[prec - 1];
         return Types.optional(PrimitiveTypeName.FIXED_LEN_BYTE_ARRAY).length(bytes).as(OriginalType.DECIMAL).
             scale(scale).precision(prec).named(name);
-
-      } if (typeInfo.equals(TypeInfoFactory.dateTypeInfo)) {
+      } else if (typeInfo.equals(TypeInfoFactory.dateTypeInfo)) {
         return Types.primitive(PrimitiveType.PrimitiveTypeName.INT32, repetition).as(OriginalType.DATE).named(name);
       } else if (typeInfo.equals(TypeInfoFactory.unknownTypeInfo)) {
         throw new UnsupportedOperationException("Unknown type not implemented");

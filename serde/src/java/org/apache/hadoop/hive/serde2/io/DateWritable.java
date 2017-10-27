@@ -53,13 +53,13 @@ public class DateWritable implements WritableComparable<DateWritable> {
     }
   };
   private static final ThreadLocal<Calendar> UTC_CALENDAR = new ThreadLocal() {
-	 @Override
+    @Override
     protected Calendar initialValue() {
       return new GregorianCalendar(TimeZone.getTimeZone("UTC"));
     }
   };
   private static final ThreadLocal<Calendar> LOCAL_CALENDAR = new ThreadLocal() {
-	 @Override
+    @Override
     protected Calendar initialValue() {
       return Calendar.getInstance();
     }
@@ -114,7 +114,7 @@ public class DateWritable implements WritableComparable<DateWritable> {
    * @return Date value corresponding to the date in the local time zone
    */
   public Date get() {
-	  return get(true);
+    return get(true);
   }
   
   public Date get(boolean doesTimeMatter) {
@@ -142,13 +142,10 @@ public class DateWritable implements WritableComparable<DateWritable> {
   }
   
   public static long daysToMillis(int d, boolean doesTimeMatter) {
-	    // Convert from day offset to ms in UTC, then apply local timezone offset.
+    // Convert from day offset to ms in UTC, then apply local timezone offset.
     long utcMidnight = d * MILLIS_PER_DAY;
-    
     long utcMidnightOffset = ((TimeZone)LOCAL_TIMEZONE.get()).getOffset(utcMidnight);
-    
     long hopefullyMidnight = utcMidnight - utcMidnightOffset;
-    
     long offsetAtHM = ((TimeZone)LOCAL_TIMEZONE.get()).getOffset(hopefullyMidnight);
     if (utcMidnightOffset == offsetAtHM) {
       return hopefullyMidnight;
