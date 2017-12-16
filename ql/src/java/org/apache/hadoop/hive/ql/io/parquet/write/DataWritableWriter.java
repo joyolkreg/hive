@@ -18,6 +18,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.hive.common.type.HiveDecimal;
 import org.apache.hadoop.hive.ql.io.parquet.serde.ParquetHiveSerDe;
 import org.apache.hadoop.hive.ql.io.parquet.timestamp.NanoTimeUtils;
+import org.apache.hadoop.hive.serde2.io.DateWritable;
 import org.apache.hadoop.hive.serde2.io.ParquetHiveRecord;
 import org.apache.hadoop.hive.serde2.objectinspector.ListObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.MapObjectInspector;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hive.serde2.objectinspector.StructObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.BinaryObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.BooleanObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.ByteObjectInspector;
+import org.apache.hadoop.hive.serde2.objectinspector.primitive.DateObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.DoubleObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.FloatObjectInspector;
 import org.apache.hadoop.hive.serde2.objectinspector.primitive.HiveCharObjectInspector;
@@ -45,6 +47,7 @@ import parquet.schema.GroupType;
 import parquet.schema.OriginalType;
 import parquet.schema.Type;
 
+import java.sql.Date;
 import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
@@ -131,6 +134,8 @@ public class DataWritableWriter {
           return new TimestampDataWriter((TimestampObjectInspector)inspector);
         case DECIMAL:
           return new DecimalDataWriter((HiveDecimalObjectInspector)inspector);
+        case DATE:
+            return new DateDataWriter((DateObjectInspector)inspector);
         default:
           throw new IllegalArgumentException("Unsupported primitive data type: " + primitiveInspector.getPrimitiveCategory());
       }
@@ -531,6 +536,20 @@ public class DataWritableWriter {
 
       System.arraycopy(decimalBytes, 0, tgt, precToBytes - decimalBytes.length, decimalBytes.length); // Padding leading zeroes/ones.
       return Binary.fromByteArray(tgt);
+    }
+  }
+
+  private class DateDataWriter implements DataWriter {
+    private DateObjectInspector inspector;
+
+    public DateDataWriter(DateObjectInspector inspector) {
+      this.inspector = inspector;
+    }
+
+    @Override
+    public void write(Object value) {
+      Date vDate = inspector.getPrimitiveJavaObject(value);
+      recordConsumer.addInteger(DateWritable.dateToDays(vDate));
     }
   }
 }
